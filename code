@@ -1,0 +1,123 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sat May 16 20:03:00 2020
+
+@author: 马骁航
+"""
+import numpy as np
+import pandas as pd
+
+Inf=1e10
+
+
+def build_graphy(matrix):#list中分别为终点编号，容量，流量
+    number=np.array(matrix).shape[0]
+    graphy={}
+    for i in range(number):
+        graphy[i]=[]
+    for i in range(number):
+        for j in range(number):
+            if matrix[i][j] > 0 and matrix[i][j]<Inf:
+                graphy[i].append([j, matrix[i][j], 0])
+    return graphy
+def get_son(points):
+    return [p[0] for p in points]
+
+def BFS(graphy):
+    number=len(graphy)
+    queue=[0]
+    trace=[]
+    depth={}
+    for i in range(number):
+        depth[i]=0
+    flag=0
+    depth[0]=1
+    while len(queue)>0:
+        tag=queue[0]
+        #depth[tag]=step
+        for point in graphy[tag]:
+            if depth[point[0]] == 0:
+                queue.append(point[0])
+                depth[point[0]]=depth[tag]+1
+        queue=queue[1:]
+        if tag==number-1:
+            flag=1
+            break
+    if flag==0:
+        return []
+    step=depth[tag]
+    for i in range(step-1,1,-1):
+        for j in range(number):
+            if depth[j]==i and tag in get_son(graphy[j]):
+                tag=j
+                trace.append(j)
+    return [0]+trace[-1::-1]+[number-1]
+
+def get_flow(graphy,trace):#在伴随网络中找流量
+    flow = 0
+    num = len(trace)
+    cap = []
+    for i in range(num-1):
+        for j in graphy[trace[i]]:
+            if j[0] == trace[i+1]:
+                cap.append(j[1])
+    flow = min(cap)
+    return flow
+
+def add_flow(graphy,trace, flow):
+    num = len(trace)
+    for i in range(num-1):
+        if trace[i+1] in get_son(graphy[trace[i]]):
+            for j in range(len(graphy[trace[i]])):
+                if graphy[trace[i]][j][0] == trace[i+1]:
+                    graphy[trace[i]][j][2] = graphy[trace[i]][j][2]+flow
+                    break
+        else: 
+            for j in range(len(graphy[trace[i+1]])):
+                if graphy[trace[i+1]][j][0] == trace[i]:
+                    graphy[trace[i+1]][j][2] = graphy[trace[i+1]][j][2]+flow  
+                    break
+    return graphy
+       
+def modify_graphy(graphy, trace, flow):
+    num = len(trace)
+    for i in range(num-1):
+        for j in range(len(graphy[trace[i]])):
+            if graphy[trace[i]][j][0] == trace[i+1]:
+                graphy[trace[i]][j][1] = graphy[trace[i]][j][1]-flow
+                if graphy[trace[i]][j][1]==0:
+                    graphy[trace[i]]=graphy[trace[i]][0:j]+graphy[trace[i]][j+1:]
+                if trace[i] not in get_son(graphy[trace[i+1]]):
+                    graphy[trace[i+1]].append([trace[i], flow, 0])
+                else:
+                    for t in range(len(graphy[trace[i+1]])):
+                        if graphy[trace[i+1]][t][0] == trace[i]:
+                            graphy[trace[i+1]][t][1]=graphy[trace[i+1]][t][1]+flow
+                            break
+                break
+    return graphy
+    
+def main():
+    #matrix=[[0,5,3,Inf],[Inf,0,5,3],[Inf,Inf,0,4],[Inf,Inf,Inf,0]]
+    matrix=[[0,15,20,15,Inf,Inf,Inf,Inf,Inf,Inf],[0,0,0,0,18,0,0,0,0,0],[0,0,0,0,9,16,3,0,0,0],[0,0,0,0,0,20,5,0,0,0]
+        ,[0,0,0,0,0,0,0,30,0,0],[0,5,0,0,0,0,0,8,15,0],[0,0,0,0,0,0,0,0,13,0],[0,0,0,0,0,0,0,0,0,22],[0,0,0,0,0,0,0,0,0,30],
+        [0,0,0,0,0,0,0,0,0,0]] 
+    graphy=build_graphy(matrix)
+    graphy_co=build_graphy(matrix)
+    trace=BFS(graphy_co)
+    while len(trace)>0:
+        flow = get_flow(graphy_co, trace)
+        graphy = add_flow(graphy, trace, flow)
+        graphy_co = modify_graphy(graphy_co, trace, flow)
+        trace = BFS(graphy_co)
+        #print(graphy_co)
+    print(sum([p[2] for p in graphy[0]]))
+
+#matrix=[[0,15,20,15,Inf,Inf,Inf,Inf,Inf,Inf],[0,0,0,0,18,0,0,0,0,0],[0,0,0,0,9,16,3,0,0,0],[0,0,0,0,0,20,5,0,0,0]
+ #       ,[0,0,0,0,0,0,0,30,0,0],[0,5,0,0,0,0,0,8,15,0],[0,0,0,0,0,0,0,0,13,0],[0,0,0,0,0,0,0,0,0,22],[0,0,0,0,0,0,0,0,0,30],
+  #      [0,0,0,0,0,0,0,0,0,0]] 
+main()
+#matrix=[[0,5,3,Inf],[Inf,0,5,3],[Inf,Inf,0,4],[Inf,Inf,Inf,0]]
+#graphy=build_graphy(matrix)
+#graphy_co=build_graphy(matrix)
+#print(BFS(graphy))
